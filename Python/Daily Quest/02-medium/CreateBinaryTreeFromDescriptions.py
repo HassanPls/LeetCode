@@ -7,11 +7,13 @@ Construct the binary tree described by descriptions and return its root.
 The test cases will be generated such that the binary tree is valid. """
 
 # Definition for a binary tree node.
-# class TreeNode:
-#     def __init__(self, val=0, left=None, right=None):
-#         self.val = val
-#         self.left = left
-#         self.right = right
+from typing import Optional
+
+class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
 
 class Solution:
     def createBinaryTree(self, descriptions: list[list[int]]) -> Optional[TreeNode]:
