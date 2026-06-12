@@ -18,6 +18,10 @@ using namespace std;
 class Solution
 {
 public:
+    int max_log;
+    vector<int> profundidade;
+    vector<vector<int>> ancestral;
+
     long long fast_pow(long long base, long long expoente, long long modulo)
     {
         long long resultado = 1;
@@ -34,32 +38,42 @@ public:
         return resultado;
     }
 
-    int dfs(int no_atual, int no_pai, int edgesAccumulated, const unordered_map<int, vector<int>> &grafo, int &max_edges, int end)
-    {
-        if (no_atual == end) {
-            return 0;
+    void dfs_precomputacao(int no, int pai, int p, const vector<vector<int>>& grafo) {
+        profundidade[no] = p;
+        ancestral[no][0] = pai;
+
+        for (int vizinho : grafo[no]) {
+            if (vizinho != pai) {
+                dfs_precomputacao(vizinho, no, p + 1, grafo);
+            }
         }
+    }
 
-        max_edges = std::max(max_edges, edgesAccumulated);
+    int getLca(int u, int v) {
+        if (profundidade[u] < profundidade[v]) swap(u, v);
 
-        for (auto vizinho : grafo.at(no_atual))
-        {
-            if (vizinho != no_pai)
-            {
-                int distance = dfs(vizinho, no_atual, edgesAccumulated + 1, grafo, max_edges, end);
-                if (distance != -1) {
-                    return distance + 1;
-                }
+        for (int i = max_log - 1; i >= 0; i--) {
+            if (profundidade[u] - (1 << i) >= profundidade[v]) {
+                u = ancestral[u][i];
             }
         }
 
-        return -1;
+        if (u == v) return u;
+
+        for (int i = max_log - 1; i >= 0; i--) {
+            if (ancestral[u][i] != ancestral[v][i]) {
+                u = ancestral[u][i];
+                v = ancestral[v][i];
+            }
+        }
+        return ancestral[u][0];
     }
 
     vector<int> assignEdgeWeights(vector<vector<int>> &edges, vector<vector<int>> &queries)
     {
-
-        unordered_map<int, vector<int>> grafo = {};
+        int n = edges.size() + 1;
+        max_log = log2(n) + 1;
+        vector<vector<int>> grafo(n + 1);
         vector<int> answer;
 
         for (auto u : edges)
@@ -68,17 +82,29 @@ public:
             grafo[u[1]].push_back(u[0]);
         }
 
-        for (size_t i = 0; i < queries.size(); i++)
-        {
-            if (queries[i][0] == queries[i][1]) {
+        profundidade.assign(n + 1, 0);
+        ancestral.assign(n + 1, vector<int>(max_log, 0));
+
+        dfs_precomputacao(1, 0, 0, grafo);
+
+        for (int i = 1; i < max_log; i++) {
+            for (int j = 1; j <= n; j++) {
+                if (ancestral[j][i - 1] != 0) {
+                    ancestral[j][i] = ancestral[ancestral[j][i - 1]][i - 1];
+                }
+            }
+        }
+
+        for(auto& q: queries) {
+            int u = q[0], v = q[1];
+            if (u == v) {
                 answer.push_back(0);
                 continue;
             }
 
-            int max_edges = dfs(queries[i][0], 0, 0, grafo, max_edges, queries[i][1]);
-
-            int totalAssignments = fast_pow(2, max_edges - 1, 1e9 + 7);
-            answer.push_back(totalAssignments);
+            int lca = getLca(u, v);
+            int total_edges = profundidade[u] + profundidade[v] - 2 * profundidade[lca];
+            answer.push_back(fast_pow(2, total_edges - 1, 1e9 + 7));
         }
 
         return answer;
